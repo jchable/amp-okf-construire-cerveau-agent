@@ -1,0 +1,21 @@
+{
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.19/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.19",
+  "version": "1.0.0",
+  "id": "__BOT_ID__",
+  "developer": {
+    "name": "aMP Lyon",
+    "websiteUrl": "https://github.com/jchable/amp-okf-construire-cerveau-agent",
+    "privacyUrl": "__BASE_URL__/privacy",
+    "termsOfUseUrl": "__BASE_URL__/terms"
+  },
+  "name": { "short": "Acme Briefing", "full": "Acme Retail · Briefing chiffre d’affaires" },
+  "description": {
+    "short": "Consulter la politique Acme depuis un chat personnel.",
+    "full": "Agent de la conférence aMP Lyon. Consulte le bundle OKF Acme et retrouve le format de briefing enregistré en console."
+  },
+  "icons": { "color": "color.png", "outline": "outline.png" },
+  "accentColor": "#164663",
+  "bots": [{ "botId": "__BOT_ID__", "scopes": ["personal"], "isNotificationOnly": false }],
+  "validDomains": []
+}

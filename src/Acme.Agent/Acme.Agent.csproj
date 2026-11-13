@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <OkfDemoSource Condition="Exists('$(LOCALAPPDATA)/Temp/amp-lyon-2026-demo1/source-521ea0ce')">$(LOCALAPPDATA)/Temp/amp-lyon-2026-demo1/source-521ea0ce</OkfDemoSource>
+    <OkfDemoSource Condition="'$(OkfDemoSource)' == ''">$(TEMP)/amp-lyon-2026-demo1/source-521ea0ce</OkfDemoSource>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="$(OkfDemoSource)/src/OKF4net.Agents/OKF4net.Agents.csproj" />
+    <PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.8.3" />
+  </ItemGroup>
+</Project>
