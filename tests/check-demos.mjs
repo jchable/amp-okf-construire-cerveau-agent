@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { spawn } from 'node:child_process';
-import { mkdtemp } from 'node:fs/promises';
+import { mkdtemp, readdir, readFile } from 'node:fs/promises';
 import http from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -65,8 +65,41 @@ async function run(project, prompt, script, user = presenter) {
     return output;
 }
 
+const preparationEnv = {
+    ...process.env,
+    OKF_CHAT_BASE_URL: 'http://127.0.0.1:' + server.address().port + '/v1',
+    OKF_CHAT_MODEL: 'test', OKF_CHAT_API_KEY: 'loopback',
+    ACME_TENANT_ID: tenant, ACME_USER_ID: presenter,
+    OKF_MEMORY_ROOT: memory, ACME_BOT_ID: randomUUID(), ACME_BOT_SECRET: 'local-test'
+};
+
+async function prepare(demo) {
+    const args = ['-NoProfile', '-File', './scripts/Prepare-Demo' + demo + '.ps1'];
+    if (demo === 3) args.push('-PublicUrl', 'https://acme-test.example.com');
+    const child = spawn('pwsh', args, {
+        windowsHide: true, env: preparationEnv, timeout: 180_000
+    });
+    let output = '';
+    child.stdout.on('data', data => output += data);
+    child.stderr.on('data', data => output += data);
+    const code = await new Promise((resolve, reject) =>
+        child.once('error', reject).once('close', resolve));
+    assert.equal(code, 0, output);
+}
+
+async function memorySnapshot() {
+    const files = (await readdir(memory, { recursive: true, withFileTypes: true }))
+        .filter(entry => entry.isFile());
+    const contents = await Promise.all(files.map(async entry => [
+        join(entry.parentPath, entry.name),
+        (await readFile(join(entry.parentPath, entry.name))).toString('base64')
+    ]));
+    return contents.sort(([a], [b]) => a.localeCompare(b));
+}
+
 const cli = 'src/Acme.Console';
 try {
+    if (process.argv.includes('--prepare')) await prepare(2);
     const policy = await run(cli, 'Une commande Acme livrée hier est-elle comptabilisée ?', [
         () => tool('okf_search', { query: 'revenue' }),
         last => {
@@ -81,6 +114,16 @@ try {
             () => tool('memoriser_preference', { preference }),
             last => { assert.doesNotMatch(last.content, /Error:|Exception/); return answer('Enregistrée.'); }
         ]);
+    }
+    if (process.argv.includes('--prepare')) {
+        const before = await memorySnapshot();
+        assert.ok(before.length > 0, 'La console doit avoir écrit la préférence.');
+        for (let pass = 0; pass < 2; pass++) {
+            await prepare(2);
+            await prepare(3);
+            assert.deepEqual(await memorySnapshot(), before, 'La préparation a modifié la mémoire.');
+        }
+        console.log('OK : préparations répétées, mémoire conservée.');
     }
     for (const project of [cli, 'tests/TeamsTurn']) {
         const result = await run(project, 'Prépare mon briefing chiffre d’affaires.', [

@@ -8,9 +8,22 @@
 
 ## Première recette sur le poste
 
-Ouvrir **PowerShell 7 dans VS Code**. Avant chaque répétition ou passage sur scène, arrêter la console et l’hôte Teams du passage précédent, puis lancer la préparation une fois. Enchaîner les démos 1, 2 et 3 dans le même terminal. Avant de saisir les clés, le contrôle local de la démo 2 permet de tester le parcours console → gestionnaire Teams avec des identités fictives.
+Ouvrir **PowerShell 7 dans VS Code**. Avant chaque répétition ou passage sur scène, arrêter la console et l’hôte Teams du passage précédent, puis lancer la préparation 1 une fois. Les préparations 2 et 3 vérifient et compilent leurs hôtes en conservant la mémoire. Enchaîner les démos 1, 2 et 3 dans le même terminal. Avant de saisir les clés, le contrôle local de la démo 2 permet de tester le parcours console → gestionnaire Teams avec des identités fictives.
 
 ## Lancer la démo 1
+
+Le petit programme `Acme.Orders` exécute une règle écrite en C# et affiche le résultat pour deux commandes, livrées depuis 1 et 31 jours. Sa méthode et ses commentaires XML servent ensuite de sources à `okfgen`. Le programme lui-même ne charge aucun bundle OKF.
+
+| Étape | Ce qui est exécuté ou lu |
+|---|---|
+| `dotnet run` | Exécute le code métier C# pour illustrer la question Acme. |
+| `okfgen generate` | Analyse les sources C# et ajoute leurs concepts au bundle métier Acme copié pendant la préparation. |
+| `Get-Content` | Affiche la fiche Markdown de la politique Acme pour montrer un concept OKF directement. Cette fiche métier est fournie avec le corpus initial. |
+| `okf validate` | Lit le bundle enrichi et vérifie sa conformité au format OKF. |
+| `okf-render` | Lit le même bundle pour construire le site HTML et son graphe. |
+| Navigation dans le site | Permet de lire les concepts et de suivre leurs relations. L’agent de la démo 2 utilisera ce même bundle comme connaissance. |
+
+La génération depuis le code documente les types, les méthodes et leurs commentaires. La politique métier des 30 jours est déjà présente dans le corpus Acme initial.
 
 **Avant la séance · préparer le poste.** Exécuter les deux commandes ci-dessous avant chaque passage. La préparation utilise Git, tar, le SDK .NET 10 et les paquets NuGet pour Windows x64. Elle remet en place le bundle métier initial et son catalogue, efface le rendu Acme précédent et réinitialise la mémoire de la console et de Teams. Le grand rendu OKF4net reste disponible.
 
@@ -28,19 +41,14 @@ Set-Alias okf       "$PWD/tools/okf/okf.exe"
 Set-Alias okf-render "$PWD/tools/okf-render/okf-render.exe"
 ```
 
-**En répétition · générer le grand site.** Si `Test-Path ./artifacts/okf4net/site/graph.html` renvoie `True`, passer directement à **Sur scène · Acme**. Pour créer ou actualiser le grand rendu, utiliser la copie figée des sources depuis ce même terminal. La génération et la validation ont pris plus de cinq minutes sur le poste de conférence. Le commit explicite fixe la destination des liens vers le code.
+**Grand rendu automatique.** La préparation 1 vérifie la présence de `index.html` et `graph.html` dans le grand site. Elle réutilise le rendu existant. Si une page manque ou si une génération précédente a été interrompue, elle génère le bundle depuis la copie figée d’OKF4net, le valide, puis lance `okf-render`. Prévoir plusieurs minutes lors du premier passage. Attendre « Démo 1 prête » avant de continuer.
 
-```powershell
-okfgen generate --repo ./source-521ea0ce --out ./artifacts/okf4net/bundle --update --no-msbuild --repo-url https://github.com/jchable/okf4net --rev 521ea0cecf543ac73b5dce4f12c84b945e06a5a8
-okf validate ./artifacts/okf4net/bundle --as-of 2026-11-12
-okf-render ./artifacts/okf4net/bundle --out ./artifacts/okf4net/site
-```
-
-**Sur scène · Acme.** Dans le terminal PowerShell 7 préparé ci-dessus, coller les lignes une par une. La première joue les deux commandes clients. Attendre « 14 concept(s) » et « 0 error(s) » avant le rendu. Les 27 avertissements sont attendus.
+**Sur scène · Acme.** Dans le terminal PowerShell 7 préparé ci-dessus, coller les lignes une par une. La première exécute les deux exemples de commandes clients. Après la génération, lire la politique affichée par `Get-Content`, puis lancer la validation. Attendre « 14 concept(s) » et « 0 error(s) » avant le rendu. Les 27 avertissements sont attendus.
 
 ```powershell
 dotnet run --project ./src/Acme.Orders -c Release --no-build
 okfgen generate --repo ./src/Acme.Orders --out ./artifacts/acme/bundle --update
+Get-Content ./artifacts/acme/bundle/policies/revenue-recognition.md
 okf validate ./artifacts/acme/bundle --as-of 2026-11-12
 okf-render ./artifacts/acme/bundle --out ./artifacts/acme/site
 Invoke-Item ./artifacts/acme/site/index.html
@@ -63,29 +71,19 @@ Les sources, les outils et les résultats résident sous `%TEMP%\amp-lyon-2026-d
 
 ## Lancer la démo 2 · Agent Acme en console
 
-**Revenir au dépôt dans le même terminal.** La démo 1 s’est déroulée sous `%TEMP%`. Le catalogue installé pendant la préparation désigne le bundle Acme qui vient de passer la validation.
+**Configurer puis préparer.** Revenir au dépôt dans le même terminal. Renseigner les variables ci-dessous une fois avant la répétition. Utiliser l’URL de base du service Chat Completions (par exemple `https://api.openai.com/v1`), un modèle acceptant les appels d’outils et la clé associée. Les GUID sont ceux du tenant et du compte présentateur.
 
 ```powershell
 Set-Location 'E:\Sources\amp-okf-construire-cerveau-agent'
-dotnet build ./src/Acme.Console -c Release
-```
-
-**Contrôle local avant de saisir les secrets.** Avec Node.js installé, ces deux lignes vérifient la lecture du bundle, le remplacement de la préférence, son rappel dans deux processus et l’isolation entre comptes. Attendre la ligne `OK : politique Acme, remplacement, rappel console et Teams, isolation entre comptes.`
-
-```powershell
-dotnet build ./tests/TeamsTurn -c Release
-node ./tests/check-demos.mjs
-```
-
-**Connecter le modèle réel.** Utiliser l’URL de base du service Chat Completions (par exemple `https://api.openai.com/v1` pour l’API OpenAI), le nom du modèle disponible sur ce service et la clé associée. Le modèle doit accepter les appels d’outils. Les GUID sont ceux du tenant et du compte présentateur. Les deux hôtes utilisent le dossier fixe `%TEMP%\amp-lyon-2026-demo1\memory`. Garder ces variables de connexion dans le terminal pour Teams.
-
-```powershell
 $env:OKF_CHAT_BASE_URL = Read-Host "URL de base OpenAI, avec /v1 si nécessaire"
 $env:OKF_CHAT_MODEL = Read-Host "Nom du modèle sur cet endpoint"
 $env:OKF_CHAT_API_KEY = Read-Host "Clé de cet endpoint" -MaskInput
 $env:ACME_TENANT_ID = Read-Host "Directory (tenant) ID Entra"
 $env:ACME_USER_ID = Read-Host "Object ID Entra de ton compte utilisateur"
+./scripts/Prepare-Demo2.ps1
 ```
+
+La préparation vérifie les variables et les GUID, ouvre le catalogue installé en démo 1, valide le bundle puis compile la console. Attendre « Démo 2 prête ». Les contrôles de configuration sont locaux. Le premier échange avec le modèle vérifie réellement la clé et le nom du modèle. Les deux hôtes utilisent le dossier fixe `%TEMP%\amp-lyon-2026-demo1\memory`. Le script affiche le catalogue, le bundle et la mémoire sélectionnés. Pour relancer la préparation avec les variables déjà saisies, exécuter uniquement `./scripts/Prepare-Demo2.ps1`.
 
 **Sur scène.** Lancer la console puis envoyer les messages ci-dessous un par un à l’invite `>`. Attendre la réponse et le retour de l’invite entre deux messages. Les lignes précédées d’un point indiquent les outils appelés. La source attendue est `policies/revenue-recognition`. Après l’écriture, la console affiche le chemin du concept de mémoire à ouvrir.
 
@@ -105,14 +103,14 @@ Mémorise ma préférence : pour mes briefings chiffre d’affaires, commence pa
 dotnet run --project ./src/Acme.Console -c Release --no-build -- "Prépare mon briefing chiffre d’affaires pour une commande Acme livrée hier."
 ```
 
-**Passage à Teams.** `Acme.Agent` contient le client et la fabrique de l’agent. L’hôte Teams ouvre le même catalogue et le même répertoire de mémoire, puis appelle `ForUser(client, tenantId, userId)` avec l’identité issue de l’activité authentifiée. Les GUID sont normalisés dans les deux hôtes. Le concept `briefing.md` est rangé dans la portée OKF du compte, dans le dossier de mémoire commun. Une nouvelle préférence remplace la précédente. Seule la préférence demandée est enregistrée. Les outils de connaissance sont en lecture seule. Passer directement à Teams après la console. Relancer la préparation à ce moment effacerait la préférence à retrouver.
+**Passage à Teams.** `Acme.Agent` contient le client et la fabrique de l’agent. L’hôte Teams ouvre le même catalogue et le même répertoire de mémoire, puis appelle `ForUser(client, tenantId, userId)` avec l’identité issue de l’activité authentifiée. Les GUID sont normalisés dans les deux hôtes. Le concept `briefing.md` est rangé dans la portée OKF du compte, dans le dossier de mémoire commun. Une nouvelle préférence remplace la précédente. Seule la préférence demandée est enregistrée. Les outils de connaissance sont en lecture seule. Passer directement à Teams après la console. La préparation 3 conserve la préférence. La préparation 1 et le nettoyage final réinitialisent le passage.
 
 ## Lancer la démo 3 · chat personnel Teams
 
 **Avant la recette.** Utiliser une application Entra mono-tenant dédiée et une ressource Azure Bot associée au même client ID, avec le canal Microsoft Teams activé. Pour cet hôte local, le mécanisme de connexion sortante est le secret client. Dans le terminal de la démo 2, conserver les variables OpenAI, tenant et utilisateur. Depuis la racine du dépôt, préparer l’hôte.
 
 ```powershell
-dotnet build ./src/Acme.Teams -c Release
+Set-Location 'E:\Sources\amp-okf-construire-cerveau-agent'
 $env:ACME_BOT_ID = Read-Host "Application (client) ID du bot"
 $env:ACME_BOT_SECRET = Read-Host "Valeur du secret client du bot" -MaskInput
 ```
@@ -121,9 +119,15 @@ Dans VS Code, ouvrir **Ports → Forward a Port**, saisir **3978** et choisir la
 
 ```powershell
 $tunnel = Read-Host "URL HTTPS du port 3978 depuis VS Code"
-./teams/New-TeamsPackage.ps1 -BotId $env:ACME_BOT_ID -PublicUrl $tunnel
+./scripts/Prepare-Demo3.ps1 -PublicUrl $tunnel
+```
+
+Attendre « Démo 3 prête », puis démarrer le service.
+
+```powershell
 dotnet run --project ./src/Acme.Teams -c Release --no-build -- --urls http://127.0.0.1:3978
 ```
+ La préparation vérifie les variables OpenAI et Entra, valide le même bundle, compile Teams et génère le ZIP avec l’URL du tunnel. Elle utilise la mémoire affichée en démo 2 et peut être relancée après la mémorisation. Pour actualiser le ZIP après un changement de tunnel, relancer `Prepare-Demo3.ps1` avec la nouvelle URL.
 
 Laisser ce terminal occupé par l’hôte. Dans un second terminal PowerShell, les deux lignes suivantes doivent afficher respectivement `200` et `401`. Le second statut confirme que la route du bot exige un jeton.
 
@@ -143,6 +147,19 @@ Prépare mon briefing chiffre d’affaires pour une commande Acme livrée hier.
 Attendre le format choisi en console, la règle des 30 jours et la référence `policies/revenue-recognition`. Dans le navigateur du présentateur, ouvrir la fiche rendue en démo 1. Enchaîner avec le [prompt de création](#prompt-à-projeter), le [gestionnaire de messages](src/Acme.Teams/TeamsBot.cs) et le [passage à l’agent commun](src/Acme.Teams/PersonalChat.cs). L’hôte maintient la session du chat en mémoire le temps de la démonstration. La préférence OKF persiste après redémarrage.
 
 **Frontière de la recette.** Les contrôles locaux utilisent un endpoint OpenAI simulé et des identités fictives. La réponse libre du modèle choisi, l’authentification avec l’identité réelle du bot, la livraison et la réponse dans le tenant seront vérifiées ensemble sur le poste. Le composant de validation JWT Microsoft est fourni avec sa [licence](src/Acme.Teams/LICENSE.Microsoft.txt). [Exemple Microsoft](https://github.com/microsoft/Agents-for-net/blob/main/src/samples/Shared/AspNetExtensions.cs)
+
+## Contrôle local des préparations et du rappel
+
+À exécuter après la démo 1, avant la configuration réelle du bot, avec Node.js installé. Le test utilise un endpoint OpenAI simulé, des identités fictives et un dossier de mémoire isolé. Il exécute la préparation 2, enregistre une préférence avec la console, relance les préparations 2 et 3 deux fois, compare les fichiers de mémoire puis vérifie leur rappel en console et par le gestionnaire Teams.
+
+```powershell
+Set-Location 'E:\Sources\amp-okf-construire-cerveau-agent'
+dotnet build ./src/Acme.Console -c Release
+dotnet build ./tests/TeamsTurn -c Release
+node ./tests/check-demos.mjs --prepare
+```
+
+Attendre les lignes « OK : préparations répétées, mémoire conservée. » puis « OK : politique Acme, remplacement, rappel console et Teams, isolation entre comptes. ». Ce contrôle produit un ZIP Teams avec une identité fictive. La préparation 3 du parcours réel le régénère avec le client ID du bot et le tunnel de présentation.
 
 ## Nettoyage après le passage
 

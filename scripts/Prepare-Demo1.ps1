@@ -48,4 +48,23 @@ foreach ($file in 'NOTICE', 'LICENSE.Apache-2.0') {
 # Utiliser les chemins de scène, même dans un terminal réutilisé après une recette.
 $env:OKF_MEMORY_ROOT = $null
 $env:OKF_CATALOG_PATH = $null
-Write-Host "Poste prêt. Dans le README, copier le bloc « préparer le terminal », puis les commandes de scène."
+$largeSite = Join-Path $outputs 'okf4net/site'
+$largeGraph = Join-Path $largeSite 'graph.html'
+$largeIndex = Join-Path $largeSite 'index.html'
+$renderPending = Join-Path $outputs 'okf4net/render.pending'
+if ((Test-Path -LiteralPath $largeGraph -PathType Leaf) -and
+    (Test-Path -LiteralPath $largeIndex -PathType Leaf) -and
+    -not (Test-Path -LiteralPath $renderPending)) {
+    Write-Host "Grand rendu OKF4net déjà disponible : $largeGraph"
+} else {
+    Write-Host "Préparation du grand rendu OKF4net. Le premier passage peut prendre plusieurs minutes."
+    $null = New-Item -ItemType Directory -Path (Split-Path -Parent $renderPending) -Force
+    Set-Content -LiteralPath $renderPending -Value $revision
+    & (Join-Path $PSScriptRoot 'Demo1.ps1') OKF4net
+    if (-not (Test-Path -LiteralPath $largeGraph -PathType Leaf) -or
+        -not (Test-Path -LiteralPath $largeIndex -PathType Leaf)) {
+        throw "Le grand rendu OKF4net est incomplet."
+    }
+    Remove-Item -LiteralPath $renderPending
+}
+Write-Host "Démo 1 prête. Dans le README, copier le bloc « préparer le terminal », puis les commandes de scène."

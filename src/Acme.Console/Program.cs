@@ -52,7 +52,13 @@ try
 }
 catch (ClientResultException ex)
 {
-    Console.Error.WriteLine($"Appel OpenAI en échec (HTTP {ex.Status}). Vérifier URL, modèle, clé et accès réseau.");
+    Console.Error.WriteLine($"Appel OpenAI en échec (HTTP {ex.Status}).");
+    var detail = ex.Message;
+    if (Environment.GetEnvironmentVariable("OKF_CHAT_API_KEY") is { Length: > 0 } key)
+        detail = detail.Replace(key, "[clé masquée]", StringComparison.Ordinal);
+    Console.Error.WriteLine(detail);
+    if (ex.Status == 429)
+        Console.Error.WriteLine("Vérifier le code renvoyé : crédits/quota à régulariser ou limite temporaire de requêtes.");
     return 1;
 }
 catch (Exception ex)
